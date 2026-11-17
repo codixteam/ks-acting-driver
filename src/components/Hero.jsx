@@ -1,11 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   MapPin,
   Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize,
   ShieldCheck,
   Car,
   Clock,
@@ -15,84 +11,27 @@ import { COMPANY_INFO } from '../data/pricing';
 import { openWhatsApp, WHATSAPP_TEMPLATES } from '../utils/whatsapp';
 
 export default function Hero({ onOpenBooking }) {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(134); // ~02:14 default duration
-  const [progress, setProgress] = useState(0);
-
+  const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    // Autoplay attempt
-    video.play().catch(() => setIsPlaying(false));
-
-    const handleTimeUpdate = () => {
-      if (video.duration) {
-        setCurrentTime(video.currentTime);
-        setDuration(video.duration);
-        setProgress((video.currentTime / video.duration) * 100);
-      }
-    };
-
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('loadedmetadata', handleTimeUpdate);
-
-    return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleTimeUpdate);
-    };
-  }, []);
 
   const togglePlay = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
+        videoRef.current.muted = false;
+        videoRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          // If browser policy requires muted playback first
+          videoRef.current.muted = true;
+          videoRef.current.play().then(() => {
+            setIsPlaying(true);
+          });
+        });
       } else {
         videoRef.current.pause();
         setIsPlaying(false);
       }
     }
-  };
-
-  const toggleSound = () => {
-    if (videoRef.current) {
-      const nextMuted = !videoRef.current.muted;
-      videoRef.current.muted = nextMuted;
-      setIsMuted(nextMuted);
-      if (!isPlaying) {
-        videoRef.current.play();
-        setIsPlaying(true);
-      }
-    }
-  };
-
-  const handleScrub = (e) => {
-    if (videoRef.current && videoRef.current.duration) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const pos = (e.clientX - rect.left) / rect.width;
-      videoRef.current.currentTime = pos * videoRef.current.duration;
-    }
-  };
-
-  const toggleFullscreen = () => {
-    if (videoRef.current) {
-      if (videoRef.current.requestFullscreen) {
-        videoRef.current.requestFullscreen();
-      } else if (videoRef.current.webkitRequestFullscreen) {
-        videoRef.current.webkitRequestFullscreen();
-      }
-    }
-  };
-
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
   const handleScrollToTariff = (e) => {
@@ -201,102 +140,43 @@ export default function Hero({ onOpenBooking }) {
           {/* Right Column: Video Cinema Showcase */}
           <div className="lg:col-span-6 relative">
             
-            {/* Luxury Video Cinema Box */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/95 bg-slate-950 p-0.5">
-              
+            {/* Luxury Video Cinema Box with Tap to Play / Pause */}
+            <div
+              onClick={togglePlay}
+              className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/95 bg-slate-950 p-0.5 cursor-pointer group select-none"
+              role="button"
+              tabIndex={0}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  togglePlay();
+                }
+              }}
+            >
               <div className="relative aspect-[16/9] w-full bg-slate-900 rounded-[22px] overflow-hidden">
                 <video
                   ref={videoRef}
-                  autoPlay
                   loop
-                  muted={isMuted}
                   playsInline
                   poster="/images/ks-hero-poster.jpg"
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                   className="w-full h-full object-cover object-center"
                 >
                   <source src="/videos/ks-hero-video.mp4" type="video/mp4" />
                   Your browser does not support HTML5 video.
                 </video>
 
-                {/* Top Overlay Badges */}
-                <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between z-20 pointer-events-none">
-                  {/* Left: Official Video */}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md text-slate-900 text-xs font-bold shadow-sm pointer-events-auto">
-                    <span className="w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center text-white text-[7px] pl-0.5">
-                      ▶
-                    </span>
-                    <span>Official Video</span>
+                {/* Big Center Play Button Overlay when Paused */}
+                {!isPlaying && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 backdrop-blur-[2px] transition-all duration-300">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#0C614C] text-white shadow-2xl flex items-center justify-center border-2 border-white/90 transform group-hover:scale-110 active:scale-95 transition-all">
+                      <Play className="w-7 h-7 sm:w-9 sm:h-9 fill-white text-white ml-1" />
+                    </div>
                   </div>
-
-                  {/* Right: 24/7 Driver Service */}
-                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 pointer-events-auto">
-                    <span>24/7 Driver Service</span>
-                  </div>
-                </div>
-
-                {/* Bottom Custom Video Controls Bar */}
-                <div className="absolute bottom-2.5 inset-x-2.5 z-20 bg-black/70 backdrop-blur-md rounded-xl px-3 py-2 flex items-center gap-3 text-white text-xs border border-white/10">
-                  
-                  {/* Play / Pause Toggle */}
-                  <button
-                    type="button"
-                    onClick={togglePlay}
-                    className="p-1 hover:text-[#25D366] transition-colors"
-                    aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-4 h-4" />
-                    ) : (
-                      <Play className="w-4 h-4 fill-current" />
-                    )}
-                  </button>
-
-                  {/* Live Time Display */}
-                  <span className="font-mono text-[11px] text-slate-300 shrink-0 select-none">
-                    {formatTime(currentTime)} / {formatTime(duration || 134)}
-                  </span>
-
-                  {/* Scrub Bar */}
-                  <div
-                    className="relative flex-1 h-1.5 bg-white/25 rounded-full overflow-hidden cursor-pointer"
-                    onClick={handleScrub}
-                  >
-                    <div
-                      className="h-full bg-white rounded-full transition-all duration-100"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Audio Toggle */}
-                  <button
-                    type="button"
-                    onClick={toggleSound}
-                    className="p-1 hover:text-[#25D366] transition-colors"
-                    title={isMuted ? 'Click to hear audio' : 'Click to mute'}
-                    aria-label="Toggle sound"
-                  >
-                    {isMuted ? (
-                      <VolumeX className="w-4 h-4 text-slate-300" />
-                    ) : (
-                      <Volume2 className="w-4 h-4 text-emerald-400" />
-                    )}
-                  </button>
-
-                  {/* Fullscreen Button */}
-                  <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    className="p-1 hover:text-[#25D366] transition-colors"
-                    title="Fullscreen"
-                    aria-label="Toggle fullscreen"
-                  >
-                    <Maximize className="w-4 h-4 text-slate-300" />
-                  </button>
-
-                </div>
-
+                )}
               </div>
-
             </div>
 
           </div>
