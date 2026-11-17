@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import {
   MapPin,
   Play,
+  Volume2,
+  VolumeX,
   ShieldCheck,
   Car,
   Clock,
@@ -12,17 +14,18 @@ import { openWhatsApp, WHATSAPP_TEMPLATES } from '../utils/whatsapp';
 
 export default function Hero({ onOpenBooking }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef(null);
 
   const togglePlay = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        videoRef.current.muted = false;
+        videoRef.current.muted = isMuted;
         videoRef.current.play().then(() => {
           setIsPlaying(true);
         }).catch(() => {
-          // If browser policy requires muted playback first
           videoRef.current.muted = true;
+          setIsMuted(true);
           videoRef.current.play().then(() => {
             setIsPlaying(true);
           });
@@ -31,6 +34,15 @@ export default function Hero({ onOpenBooking }) {
         videoRef.current.pause();
         setIsPlaying(false);
       }
+    }
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      const nextMuted = !isMuted;
+      videoRef.current.muted = nextMuted;
+      setIsMuted(nextMuted);
     }
   };
 
@@ -158,6 +170,7 @@ export default function Hero({ onOpenBooking }) {
                 <video
                   ref={videoRef}
                   loop
+                  muted={isMuted}
                   playsInline
                   poster="/images/ks-hero-poster.jpg"
                   onPlay={() => setIsPlaying(true)}
@@ -176,6 +189,21 @@ export default function Hero({ onOpenBooking }) {
                     </div>
                   </div>
                 )}
+
+                {/* Sleek Floating Sound Toggle (Mute / Unmute) */}
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className="btn-press absolute bottom-3 right-3 z-30 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/85 text-white backdrop-blur-md border border-white/20 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-white/40"
+                  aria-label={isMuted ? "Unmute video" : "Mute video"}
+                  title={isMuted ? "Click to unmute" : "Click to mute"}
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-4 h-4 text-slate-200" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 text-emerald-400" />
+                  )}
+                </button>
               </div>
             </div>
 
